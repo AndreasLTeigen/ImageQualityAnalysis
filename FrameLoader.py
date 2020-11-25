@@ -17,24 +17,6 @@ def displayFrame(frame):
     frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
     cv2.imshow('video', frame)
     cv2.waitKey(0)
-
-
-def getcontrastDataArray(frame, focus_analysis):
-    # Remove ignored blocks and restructure into 1d array
-    bw_src = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    grid = focus_analysis.getDiffSumGrid(bw_src)
-    valid_marked_grid = focus_analysis.ignoreRegions(grid)
-    valid_marked_array = valid_marked_grid.flatten()
-    valid_array = valid_marked_array[valid_marked_array < 256*focus_analysis.block_size*focus_analysis.block_size]
-    return valid_array
-
-def getLuminescenceDataArray(frame, focus_analysis):
-    bw_src = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-    grid = focus_analysis.getSumGrid(bw_src)
-    valid_marked_grid = focus_analysis.ignoreRegions(grid)
-    valid_marked_array = valid_marked_grid.flatten()
-    valid_array = valid_marked_array[valid_marked_array < 256*focus_analysis.block_size*focus_analysis.block_size]
-    return valid_array
     
 def main():
     scale = 0.5
@@ -49,12 +31,14 @@ def main():
     contrast_log = []
     mean_contrast_log = []
     std_contrast_log = []
+    percentile_05_contrast_log = []
     percentile_95_contrast_log = []
     kurtosis_contrast_log = []
 
     luminescence_log = []
     mean_luminescence_log = []
     std_luminescence_log = []
+    percentile_05_luminescence_log = []
     percentile_95_luminescence_log = []
     kurtosis_luminescence_log = []
 
@@ -75,6 +59,7 @@ def main():
                 break
 
             frame = scaleResizeFrame(frame, scale)
+            #print("SHAPE: ", frame.shape)
 
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
@@ -82,8 +67,8 @@ def main():
             #displayFrame(heat_map)
 
             # Remove ignored blocks and restructure into 1d array
-            contrast_array = getcontrastDataArray(frame, focus_analysis)
-            luminescence_array = getLuminescenceDataArray(frame, focus_analysis)
+            contrast_array = focus_analysis.getcontrastDataArray(frame)
+            luminescence_array = focus_analysis.getLuminescenceDataArray(frame)
 
             # Calculate blur
             blur_gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
@@ -98,6 +83,7 @@ def main():
             frame_contrast = np.sum(contrast_array)
             mean_frame_contrast = frame_contrast/len(contrast_array)
             std_frame_contrast = np.std(contrast_array)
+            percentile_05_frame_contrast = np.percentile(contrast_array, 5)
             percentile_95_frame_contrast = np.percentile(contrast_array, 95)
             kurtosis_frame_contrast = kurtosis(contrast_array)
 
@@ -105,6 +91,7 @@ def main():
             frame_luminescence = np.sum(luminescence_array)
             mean_frame_luminescence = frame_luminescence/len(luminescence_array)
             std_frame_luminescence = np.std(luminescence_array)
+            percentile_05_frame_luminescence = np.percentile(luminescence_array, 5)
             percentile_95_frame_luminescence = np.percentile(luminescence_array, 95)
             kurtosis_frame_luminescence = kurtosis(luminescence_array)
 
@@ -112,6 +99,7 @@ def main():
             contrast_log.append(frame_contrast)
             mean_contrast_log.append(mean_frame_contrast)
             std_contrast_log.append(std_frame_contrast)
+            percentile_05_contrast_log.append(percentile_05_frame_contrast)
             percentile_95_contrast_log.append(percentile_95_frame_contrast)
             kurtosis_contrast_log.append(kurtosis_frame_contrast)
 
@@ -119,6 +107,7 @@ def main():
             luminescence_log.append(frame_luminescence)
             mean_luminescence_log.append(mean_frame_luminescence)
             std_luminescence_log.append(std_frame_luminescence)
+            percentile_05_luminescence_log.append(percentile_05_frame_luminescence)
             percentile_95_luminescence_log.append(percentile_95_frame_luminescence)
             kurtosis_luminescence_log.append(kurtosis_frame_luminescence)
 
@@ -139,6 +128,7 @@ def main():
         plt.show()
 
         plt.plot(percentile_95_contrast_log)
+        plt.plot(percentile_05_contrast_log)
         plt.title("contrast 95th percentile")
         plt.ylabel('contrast 95th percentile')
         plt.xlabel('Frame nr')
@@ -163,7 +153,8 @@ def main():
         plt.xlabel('Frame nr')
         plt.show()
 
-        plt.plot(percentile_95_luminescence_log)
+        plt.plot(percentile_95_luminescence_log, label='95th')
+        plt.plot(percentile_05_luminescence_log, label='05th')
         plt.title("Luminescence 95th percentile")
         plt.ylabel('Luminescence 95th percentile')
         plt.xlabel('Frame nr')
@@ -188,7 +179,7 @@ def main():
         frame = scaleResizeFrame(frame, scale)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         #displayFrame(frame)
-        contrast_array = getcontrastDataArray(frame, focus_analysis)
+        contrast_array = focus_analysis.getcontrastDataArray(frame)
         plt.hist(contrast_array, bins=100)
         plt.ylabel('Num blocks')
         plt.xlabel('contrast value')

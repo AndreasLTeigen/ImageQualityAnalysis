@@ -12,7 +12,7 @@ from Utils import utils
 class FocusAnalysis:
     def __init__(self):
         self.loadFirstOrderDerivativeOperators()
-        self.block_size = 10
+        self.block_size = 10#60
 
     def brennerFilter(self, image):
         src = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -51,12 +51,40 @@ class FocusAnalysis:
         return contrast_heatmap
 
 
+    def getcontrastDataArray(self, frame):
+        # Remove ignored blocks and restructure into 1d array
+        bw_src = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        grid = self.getDiffSumGrid(bw_src)
+        valid_marked_grid = self.ignoreRegions(grid)
+        valid_marked_array = valid_marked_grid.flatten()
+        valid_array = valid_marked_array[valid_marked_array < 256*self.block_size*self.block_size]
+        return valid_array
+
+    def getLuminescenceDataArray(self, frame):
+        bw_src = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        grid = self.getSumGrid(bw_src)
+        valid_marked_grid = self.ignoreRegions(grid)
+        valid_marked_array = valid_marked_grid.flatten()
+        valid_array = valid_marked_array[valid_marked_array < 256*self.block_size*self.block_size]
+        return valid_array
+
+    def get2dFourierTransform(self, frame, size=60, thresh=10):
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        (h,w) = frame.shape
+        (cX, cY) = (int(w / 2.0), int(h / 2.0))
+        fft = np.fft.fft2(frame)
+        fftShift = np.fft.fftshift(fft)
+        magnitude = 20* np.log(np.abs(fftShift))
+        return magnitude
+        
+
+
     def ignoreRegions(self, local_diff_grid, ignore_value=-1, block_size_ignore=None):
         # Ignoring regions of video with  overlay, hardcoded with scale 0.5 in mind
         if block_size_ignore == None:
             block_size_ignore = self.block_size
 
-
+        #TODO: Make this work for block size = 40, this can possibly be done by using the rest (%) operator
         # Top border
         for i in range(int(100/block_size_ignore)):
             local_diff_grid[i,:] = ignore_value

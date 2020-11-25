@@ -1,6 +1,8 @@
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
+import cv2
 
 def detect_blur_fft(image, size=60, thresh=10, vis=False):
     # grab the dimensions of the image and use the dimensions to
@@ -27,6 +29,11 @@ def detect_blur_fft(image, size=60, thresh=10, vis=False):
         ax[0].set_xticks([])
         ax[0].set_yticks([])
 
+        fig = plt.imshow(image, cmap="gray")
+        print(type(fig))
+        if type(fig) == matplotlib.image.AxesImage:
+        print("len(fig) = ", len(fig))
+
         # display the magnitude image
         ax[1].imshow(magnitude, cmap="gray")
         ax[1].set_title("Magnitude Spectrum")
@@ -47,6 +54,11 @@ def detect_blur_fft(image, size=60, thresh=10, vis=False):
     # compute the magnitude spectrum of the reconstructed image,
     # then compute the mean of the magnitude values
     magnitude = 20 * np.log(np.abs(recon))
+
+    
+    #cv2.imshow("Magnitude", magnitude)
+    #cv2.waitKey(0)
+
     mean = np.mean(magnitude)
 
     # the image will be considered "blurry" if the mean value of the
